@@ -71,14 +71,49 @@ def t_comment_error(t):
 # Build the lexer
 lexer = lex.lex()
 
+import ply.yacc as yacc
+
+def p_idl(p):
+   '''idl : statement_include
+          | statement_declaration
+          | statement_enum_declaration'''
+
+def p_enum_item(p):
+    'enum_item : NAME \'=\' NUMBER' 
+
+def p_enum_item_list(p):
+    'enum_item_list : enum_item enum_item_list_tail'
+
+def p_enum_item_list_tail(p):
+    '''enum_item_list_tail : \',\' enum_item_list
+                           | \',\'
+                           | '''
+
+def p_statement_enum_declaration(p):
+    'statement_enum_declaration : ENUM NAME \'{\' enum_item_list \'}\''
+
+def p_statement_include(p):
+    'statement_include : INCLUDE STRINGLITERAL'
+    print (p[1:])
+
+def p_constexpr(p):
+    '''constexpr : NUMBER
+                 | STRINGLITERAL'''
+
+def p_statement_declaration(p):
+    'statement_declaration : CONST NAME NAME \'=\' constexpr \';\''
+    print (p[1:])
+
+def p_error(p):
+    print("Syntax error")
+
+parser = yacc.yacc()
+
 while True:
-    try:
-        s = raw_input('lex > ')   # use input() on Python 3
-    except EOFError:
-        break
-    lexer.input(s)
-    while True:
-        tok = lexer.token()
-        if not tok: 
-            break      # No more input
-        print(tok)
+   try:
+       s = raw_input('calc > ')
+   except EOFError:
+       break
+   if not s: continue
+   result = parser.parse(s)
+   print(result)
