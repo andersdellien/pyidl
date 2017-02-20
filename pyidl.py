@@ -1,3 +1,4 @@
+import sys
 import ply.lex as lex
 
 states = (
@@ -6,7 +7,6 @@ states = (
 
 reserved = {
     'const' : 'CONST',
-    'string' : 'STRING',
     'include' : 'INCLUDE',
     'enum' : 'ENUM',
     'struct' : 'STRUCT',
@@ -60,12 +60,16 @@ def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
 
+def t_comment_newline(t):
+    r'\n+'
+    t.lexer.lineno += t.value.count("\n")
+
 def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
 def t_comment_error(t):
-    print("Illlegal character '%s'" % t.value[0])
+    print("Illegal character in comment '%s'" % t.value[0])
     t.lexer.skip(1)
 
 # Build the lexer
@@ -74,15 +78,53 @@ lexer = lex.lex()
 import ply.yacc as yacc
 
 def p_idl(p):
-   '''idl : statement_include
-          | statement_declaration
-          | statement_enum_declaration'''
+   'idl : statement_list'
+
+def p_statement_list(p):
+   '''statement_list : statement statement_list
+                     | '''
+def p_statement(p):
+   '''statement : statement_include
+                | statement_declaration
+                | statement_enum_declaration
+                | statement_struct_declaration'''
+
+def p_qualified_name(p):
+    '''qualified_name : NAME \'.\' qualified_name
+                      | NAME'''
+
+def p_struct_declaration(p):
+    'statement_struct_declaration : STRUCT NAME \'{\' struct_item_list \'}\''
+    print (p[1:])
+
+def p_struct_item_list(p):
+    '''struct_item_list : struct_item struct_item_list
+                         | '''
+
+def p_struct_item(p):
+    'struct_item : NUMBER \':\' OPTIONAL type qualified_name opt_assignment struct_item_terminator'
+
+def p_struct_item_terminator(p):
+    '''struct_item_terminator : \',\'
+                              | \';\'
+                              | '''
+
+def p_opt_assignment(p):
+    '''opt_assignment : \'=\' qualified_name
+                      | \'=\' NUMBER
+                      | '''
+
+def p_type(p):
+    '''type : qualified_name
+            | LIST \'<\' NAME \'>\' '''
 
 def p_enum_item(p):
-    'enum_item : NAME \'=\' NUMBER' 
+    'enum_item : NAME opt_assignment'
+    print (p[1:])
 
 def p_enum_item_list(p):
     'enum_item_list : enum_item enum_item_list_tail'
+    print (p[1:])
 
 def p_enum_item_list_tail(p):
     '''enum_item_list_tail : \',\' enum_item_list
@@ -91,6 +133,7 @@ def p_enum_item_list_tail(p):
 
 def p_statement_enum_declaration(p):
     'statement_enum_declaration : ENUM NAME \'{\' enum_item_list \'}\''
+    print (p[1:])
 
 def p_statement_include(p):
     'statement_include : INCLUDE STRINGLITERAL'
@@ -101,19 +144,15 @@ def p_constexpr(p):
                  | STRINGLITERAL'''
 
 def p_statement_declaration(p):
-    'statement_declaration : CONST NAME NAME \'=\' constexpr \';\''
+    'statement_declaration : CONST NAME NAME \'=\' constexpr opt_semicolon'
     print (p[1:])
+
+def p_opt_semicolon(p):
+    '''opt_semicolon : \';\'
+                     | '''
 
 def p_error(p):
     print("Syntax error")
 
 parser = yacc.yacc()
-
-while True:
-   try:
-       s = raw_input('calc > ')
-   except EOFError:
-       break
-   if not s: continue
-   result = parser.parse(s)
-   print(result)
+parser.parse(open(sys.argv[1], 'r').read())
