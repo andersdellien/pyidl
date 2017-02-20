@@ -1,5 +1,8 @@
 import sys
 import ply.lex as lex
+import os
+
+class_name = os.path.splitext(sys.argv[1])[0]
 
 states = (
    ('comment','exclusive'),
@@ -95,7 +98,6 @@ def p_qualified_name(p):
 
 def p_struct_declaration(p):
     'statement_struct_declaration : STRUCT NAME \'{\' struct_item_list \'}\''
-    print (p[1:])
 
 def p_struct_item_list(p):
     '''struct_item_list : struct_item struct_item_list
@@ -120,11 +122,9 @@ def p_type(p):
 
 def p_enum_item(p):
     'enum_item : NAME opt_assignment'
-    print (p[1:])
 
 def p_enum_item_list(p):
     'enum_item_list : enum_item enum_item_list_tail'
-    print (p[1:])
 
 def p_enum_item_list_tail(p):
     '''enum_item_list_tail : \',\' enum_item_list
@@ -133,11 +133,9 @@ def p_enum_item_list_tail(p):
 
 def p_statement_enum_declaration(p):
     'statement_enum_declaration : ENUM NAME \'{\' enum_item_list \'}\''
-    print (p[1:])
 
 def p_statement_include(p):
     'statement_include : INCLUDE STRINGLITERAL'
-    print (p[1:])
 
 def p_constexpr(p):
     '''constexpr : NUMBER
@@ -145,7 +143,9 @@ def p_constexpr(p):
 
 def p_statement_declaration(p):
     'statement_declaration : CONST NAME NAME \'=\' constexpr opt_semicolon'
-    print (p[1:])
+    function_name = p[3].replace(class_name, "").replace("Path", "")
+    if (function_name != "Prefix" and function_name != "Name"):
+        print ("  void %s();" % function_name)
 
 def p_opt_semicolon(p):
     '''opt_semicolon : \';\'
@@ -155,4 +155,7 @@ def p_error(p):
     print("Syntax error")
 
 parser = yacc.yacc()
+print ("class %s" % class_name)
+print ("{")
 parser.parse(open(sys.argv[1], 'r').read())
+print ("}")
