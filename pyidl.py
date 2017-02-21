@@ -95,16 +95,36 @@ def p_statement(p):
 def p_qualified_name(p):
     '''qualified_name : NAME \'.\' qualified_name
                       | NAME'''
+    p[0] = p[1]
+
+def p_struct_name(p):
+    'struct_name : NAME'
+    p[0] = p[1]
 
 def p_struct_declaration(p):
-    'statement_struct_declaration : STRUCT NAME \'{\' struct_item_list \'}\''
+    'statement_struct_declaration : STRUCT struct_name \'{\' struct_item_list \'}\''
+    struct_name = p[2].replace(class_name, "").replace("Path", "")
+    if (struct_name != ""):
+        print ('struct %s' % (struct_name))
+        print ('{')
+        for s in p[4]:
+            print ('  %s %s;' % (s[0], s[1]))
+        print ('}')
+    p[0] = p[2]
 
 def p_struct_item_list(p):
     '''struct_item_list : struct_item struct_item_list
-                         | '''
+                        | '''
+    if (len(p) > 1):
+        if (p[2] == None):
+            p[0] = [p[1]]
+        else:
+            p[2].append(p[1])
+            p[0] = list(p[2])
 
 def p_struct_item(p):
     'struct_item : NUMBER \':\' OPTIONAL type qualified_name opt_assignment struct_item_terminator'
+    p[0] = (p[4], p[5])
 
 def p_struct_item_terminator(p):
     '''struct_item_terminator : \',\'
@@ -119,6 +139,7 @@ def p_opt_assignment(p):
 def p_type(p):
     '''type : qualified_name
             | LIST \'<\' NAME \'>\' '''
+    p[0] = p[1]
 
 def p_enum_item(p):
     'enum_item : NAME opt_assignment'
@@ -144,8 +165,10 @@ def p_constexpr(p):
 def p_statement_declaration(p):
     'statement_declaration : CONST NAME NAME \'=\' constexpr opt_semicolon'
     function_name = p[3].replace(class_name, "").replace("Path", "")
-    if (function_name != "Prefix" and function_name != "Name"):
-        print ("  void %s();" % function_name)
+    if (function_name == "OutputRoleConfigureCommand"):
+        print ("void %s(OutputRoleConfigure outputRoleConfigure);" % function_name)
+    elif (function_name != "Prefix" and function_name != "Name"):
+        print ("void %s();" % function_name)
 
 def p_opt_semicolon(p):
     '''opt_semicolon : \';\'
@@ -155,7 +178,4 @@ def p_error(p):
     print("Syntax error")
 
 parser = yacc.yacc()
-print ("class %s" % class_name)
-print ("{")
 parser.parse(open(sys.argv[1], 'r').read())
-print ("}")
